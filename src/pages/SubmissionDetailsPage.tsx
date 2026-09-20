@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from '@tanstack/react-router'
 import Loader from '../components/ui/Loader'
-import PdfPreviewModal from '../components/ui/PdfPreviewModal'
-
+import { downloadFile, getCleanViewUrl } from '../lib/cloudinaryUtils'
 
 interface PhaseField {
   id: string
@@ -30,22 +29,11 @@ interface Registration {
   responses: Record<string, unknown>
 }
 
-const downloadFile = (url: string) => {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '';
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-};
-
 export function SubmissionDetailsPage() {
   const { hackathonId, registrationId } = useParams({ from: '/h/$hackathonId/submission/$registrationId' })
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [hackathon, setHackathon] = useState<Hackathon | null>(null)
   const [loading, setLoading] = useState(true)
-  const [previewingUrl, setPreviewingUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,13 +192,14 @@ export function SubmissionDetailsPage() {
                                                 </div>
                                                 {displayVal && (
                                                   <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => setPreviewingUrl(displayVal)}
-                                                      className="flex-1 sm:flex-none border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-400 hover:text-black px-4 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center"
+                                                    <a
+                                                      href={getCleanViewUrl(displayVal)}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="flex-1 sm:flex-none border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-400 hover:text-black px-4 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center inline-block"
                                                     >
-                                                      View PDF / Presentation
-                                                    </button>
+                                                      View PDF / Presentation ↗
+                                                    </a>
                                                     <button
                                                       type="button"
                                                       onClick={() => downloadFile(displayVal)}
@@ -240,12 +229,6 @@ export function SubmissionDetailsPage() {
         </div>
       </div>
     </section>
-    {previewingUrl && (
-      <PdfPreviewModal
-        url={previewingUrl}
-        onClose={() => setPreviewingUrl(null)}
-      />
-    )}
     </>
   )
 }
