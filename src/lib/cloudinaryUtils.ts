@@ -9,9 +9,15 @@ export function getCleanViewUrl(url: string): string {
   if (!url) return url;
   if (!url.includes("res.cloudinary.com")) return url;
 
-  // Remove fl_attachment flags if present
-  let clean = url.replace(/\/fl_attachment[^/]*\//g, "/");
+  // Remove existing fl_attachment or fl_inline flags if present to avoid duplicating flags
+  let clean = url.replace(/\/(fl_attachment|fl_inline)[^/]*\//g, "/");
   clean = clean.replace(/([^:]\/)\/+/g, "$1");
+
+  // Inject fl_inline flag to force Cloudinary to deliver with Content-Disposition: inline header
+  if (clean.includes("/upload/")) {
+    clean = clean.replace("/upload/", "/upload/fl_inline/");
+  }
+
   return clean;
 }
 

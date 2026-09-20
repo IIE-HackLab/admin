@@ -7,48 +7,13 @@ interface Props {
 }
 
 export default function PdfPreviewModal({ url, onClose }: Props) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [viewMode, setViewMode] = useState<"google" | "direct">("google");
+  const [viewMode, setViewMode] = useState<"direct" | "google">("direct");
 
   const cleanUrl = getCleanViewUrl(url);
   const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;
   const filename = getFilenameFromUrl(url);
-
-  // Try loading blob directly for fast native PDF rendering if CORS allows
-  useEffect(() => {
-    let active = true;
-    let createdBlobUrl = "";
-
-    const fetchBlob = async () => {
-      try {
-        const res = await fetch(cleanUrl, { mode: "cors" });
-        if (res.ok) {
-          const blob = await res.blob();
-          if (blob.type.includes("pdf") || cleanUrl.toLowerCase().endsWith(".pdf")) {
-            const pdfBlob = new Blob([blob], { type: "application/pdf" });
-            createdBlobUrl = URL.createObjectURL(pdfBlob);
-            if (active) {
-              setObjectUrl(createdBlobUrl);
-              setViewMode("direct");
-            }
-          }
-        }
-      } catch {
-        // Fall back to Google Docs Viewer if fetch is blocked by CORS
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    fetchBlob();
-
-    return () => {
-      active = false;
-      if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
-    };
-  }, [cleanUrl]);
 
   // Close on Escape key
   useEffect(() => {
@@ -68,7 +33,7 @@ export default function PdfPreviewModal({ url, onClose }: Props) {
     }
   };
 
-  const iframeSrc = viewMode === "direct" && objectUrl ? objectUrl : googleViewerUrl;
+  const iframeSrc = viewMode === "direct" ? cleanUrl : googleViewerUrl;
 
   return (
     <div
@@ -90,30 +55,28 @@ export default function PdfPreviewModal({ url, onClose }: Props) {
 
           <div className="flex items-center flex-wrap gap-2">
             {/* View Mode Toggle */}
-            {objectUrl && (
-              <div className="flex items-center bg-white/5 border border-white/10 rounded p-0.5 mr-2">
-                <button
-                  onClick={() => setViewMode("google")}
-                  className={`px-2.5 py-1 text-[9px] font-orbitron uppercase font-bold rounded transition-all ${
-                    viewMode === "google"
-                      ? "bg-cyan-400 text-black shadow-[0_0_8px_rgba(0,245,255,0.4)]"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Google View
-                </button>
-                <button
-                  onClick={() => setViewMode("direct")}
-                  className={`px-2.5 py-1 text-[9px] font-orbitron uppercase font-bold rounded transition-all ${
-                    viewMode === "direct"
-                      ? "bg-cyan-400 text-black shadow-[0_0_8px_rgba(0,245,255,0.4)]"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  Direct PDF
-                </button>
-              </div>
-            )}
+            <div className="flex items-center bg-white/5 border border-white/10 rounded p-0.5 mr-2">
+              <button
+                onClick={() => setViewMode("direct")}
+                className={`px-2.5 py-1 text-[9px] font-orbitron uppercase font-bold rounded transition-all ${
+                  viewMode === "direct"
+                    ? "bg-cyan-400 text-black shadow-[0_0_8px_rgba(0,245,255,0.4)]"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Inline View
+              </button>
+              <button
+                onClick={() => setViewMode("google")}
+                className={`px-2.5 py-1 text-[9px] font-orbitron uppercase font-bold rounded transition-all ${
+                  viewMode === "google"
+                    ? "bg-cyan-400 text-black shadow-[0_0_8px_rgba(0,245,255,0.4)]"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Google View
+              </button>
+            </div>
 
             {/* External Open Link */}
             <a
@@ -148,7 +111,7 @@ export default function PdfPreviewModal({ url, onClose }: Props) {
         {/* Document Canvas */}
         <div className="flex-1 overflow-hidden relative bg-slate-950">
           {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 z-10 pointer-events-none">
               <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin shadow-[0_0_15px_#00f5ff]" />
               <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest animate-pulse">
                 Initializing Document Stream...

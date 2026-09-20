@@ -67,7 +67,7 @@ const QRScanner = ({ onScan, onClose }: QRScannerProps) => {
         } else {
           try {
             scannerRef.current.clear();
-          } catch (e) {
+          } catch {
             // silent cleanup
           }
         }

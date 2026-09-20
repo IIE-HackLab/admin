@@ -264,7 +264,7 @@ export function TeamDetailsPage() {
                     {Object.entries(submission).map(([key, val]) => {
                       if (typeof val === 'string' && val.includes('cloudinary.com') && key !== 'banner') {
                         const isDoc = val.includes('/raw/upload/') || /\.(pdf|ppt|pptx|doc|docx)$/i.test(val);
-                        const viewUrl = isDoc ? `https://docs.google.com/viewer?url=${encodeURIComponent(getCleanViewUrl(val))}` : val;
+                        const viewUrl = isDoc ? getCleanViewUrl(val) : val;
                         return (
                           <div key={key} className="flex items-center gap-1.5">
                             <a href={viewUrl} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-[9px] font-bold text-purple-400 font-orbitron uppercase hover:bg-purple-500/20 transition-all">
