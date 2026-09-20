@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from '@tanstack/react-router'
 import Loader from '../components/ui/Loader'
+import { downloadFile, getCleanViewUrl } from '../lib/cloudinaryUtils'
 
 interface PhaseField {
   id: string
@@ -263,16 +264,16 @@ export function TeamDetailsPage() {
                     {Object.entries(submission).map(([key, val]) => {
                       if (typeof val === 'string' && val.includes('cloudinary.com') && key !== 'banner') {
                         const isDoc = val.includes('/raw/upload/') || /\.(pdf|ppt|pptx|doc|docx)$/i.test(val);
-                        const viewUrl = isDoc ? `https://docs.google.com/viewer?url=${encodeURIComponent(val)}` : val;
+                        const viewUrl = isDoc ? `https://docs.google.com/viewer?url=${encodeURIComponent(getCleanViewUrl(val))}` : val;
                         return (
                           <div key={key} className="flex items-center gap-1.5">
                             <a href={viewUrl} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-[9px] font-bold text-purple-400 font-orbitron uppercase hover:bg-purple-500/20 transition-all">
                               {isDoc ? 'View PPT/PDF' : 'Project Asset'}
                             </a>
                             {isDoc && (
-                              <a href={val} target="_blank" rel="noreferrer" download className="px-2 py-1.5 bg-white/5 border border-white/10 text-[9px] font-bold text-slate-400 font-orbitron uppercase hover:bg-white/10 transition-all">
+                              <button type="button" onClick={() => downloadFile(val)} className="px-2 py-1.5 bg-white/5 border border-white/10 text-[9px] font-bold text-slate-400 font-orbitron uppercase hover:bg-white/10 transition-all" title="Download Asset">
                                 ⬇
-                              </a>
+                              </button>
                             )}
                           </div>
                         );

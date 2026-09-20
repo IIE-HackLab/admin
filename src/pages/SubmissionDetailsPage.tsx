@@ -201,15 +201,13 @@ export function SubmissionDetailsPage() {
                                                     >
                                                       View PDF / Presentation
                                                     </button>
-                                                    <a 
-                                                      href={displayVal} 
-                                                      target="_blank" 
-                                                      rel="noopener noreferrer"
-                                                      download
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => downloadFile(displayVal)}
                                                       className="flex-1 sm:flex-none border border-white/10 bg-white/5 hover:bg-white/20 text-white px-4 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center"
                                                     >
                                                       Download Asset
-                                                    </a>
+                                                    </button>
                                                   </div>
                                                 )}
                                             </div>
