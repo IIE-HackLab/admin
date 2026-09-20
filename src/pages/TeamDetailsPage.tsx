@@ -262,8 +262,19 @@ export function TeamDetailsPage() {
                     )}
                     {Object.entries(submission).map(([key, val]) => {
                       if (typeof val === 'string' && val.includes('cloudinary.com') && key !== 'banner') {
+                        const isDoc = val.includes('/raw/upload/') || /\.(pdf|ppt|pptx|doc|docx)$/i.test(val);
+                        const viewUrl = isDoc ? `https://docs.google.com/viewer?url=${encodeURIComponent(val)}` : val;
                         return (
-                          <a key={key} href={val} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-[9px] font-bold text-purple-400 font-orbitron uppercase hover:bg-purple-500/20 transition-all">Project PDF/Asset</a>
+                          <div key={key} className="flex items-center gap-1.5">
+                            <a href={viewUrl} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 text-[9px] font-bold text-purple-400 font-orbitron uppercase hover:bg-purple-500/20 transition-all">
+                              {isDoc ? 'View PPT/PDF' : 'Project Asset'}
+                            </a>
+                            {isDoc && (
+                              <a href={val} target="_blank" rel="noreferrer" download className="px-2 py-1.5 bg-white/5 border border-white/10 text-[9px] font-bold text-slate-400 font-orbitron uppercase hover:bg-white/10 transition-all">
+                                ⬇
+                              </a>
+                            )}
+                          </div>
                         );
                       }
                       return null;

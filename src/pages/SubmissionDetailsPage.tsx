@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from '@tanstack/react-router'
 import Loader from '../components/ui/Loader'
+import PdfPreviewModal from '../components/ui/PdfPreviewModal'
+
 
 interface PhaseField {
   id: string
@@ -33,6 +35,7 @@ export function SubmissionDetailsPage() {
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [hackathon, setHackathon] = useState<Hackathon | null>(null)
   const [loading, setLoading] = useState(true)
+  const [previewingUrl, setPreviewingUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +86,7 @@ export function SubmissionDetailsPage() {
   const teamName = getTeamName();
 
   return (
+    <>
     <section className="space-y-8 pb-20">
       <header>
         <Link 
@@ -189,14 +193,22 @@ export function SubmissionDetailsPage() {
                                                     <p className="text-[9px] font-mono text-slate-500 truncate opacity-60 hover:opacity-100 transition-opacity">{displayVal || 'NO_PATH_LOCATED'}</p>
                                                 </div>
                                                 {displayVal && (
-                                                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                                                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => setPreviewingUrl(displayVal)}
+                                                      className="flex-1 sm:flex-none border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-400 hover:text-black px-4 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center"
+                                                    >
+                                                      View PDF / Presentation
+                                                    </button>
                                                     <a 
                                                       href={displayVal} 
                                                       target="_blank" 
                                                       rel="noopener noreferrer"
-                                                      className="flex-1 sm:flex-none border border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-400 hover:text-black px-6 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center"
+                                                      download
+                                                      className="flex-1 sm:flex-none border border-white/10 bg-white/5 hover:bg-white/20 text-white px-4 py-2.5 text-[9px] font-black font-orbitron tracking-widest transition-all uppercase text-center"
                                                     >
-                                                      Open Asset
+                                                      Download Asset
                                                     </a>
                                                   </div>
                                                 )}
@@ -220,5 +232,12 @@ export function SubmissionDetailsPage() {
         </div>
       </div>
     </section>
+    {previewingUrl && (
+      <PdfPreviewModal
+        url={previewingUrl}
+        onClose={() => setPreviewingUrl(null)}
+      />
+    )}
+    </>
   )
 }
