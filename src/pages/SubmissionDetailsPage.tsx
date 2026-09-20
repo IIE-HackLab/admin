@@ -30,6 +30,16 @@ interface Registration {
   responses: Record<string, unknown>
 }
 
+const downloadFile = (url: string) => {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
 export function SubmissionDetailsPage() {
   const { hackathonId, registrationId } = useParams({ from: '/h/$hackathonId/submission/$registrationId' })
   const [registration, setRegistration] = useState<Registration | null>(null)

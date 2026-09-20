@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useEffect, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -7,39 +7,70 @@ interface QRScannerProps {
 }
 
 const QRScanner = ({ onScan, onClose }: QRScannerProps) => {
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
-    const timer = setTimeout(() => {
-      const newScanner = new Html5QrcodeScanner(
-        'qr-reader',
-        { 
-          fps: 10, 
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0
-        },
-        false
-      );
+    let isMounted = true;
+    const html5Qrcode = new Html5Qrcode('qr-reader');
+    scannerRef.current = html5Qrcode;
 
-      newScanner.render(
-        (decodedText) => {
-          onScan(decodedText);
-        },
-        () => {
-          // silent error for scan failures
+    const startScanner = async () => {
+      const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
+      try {
+        // Try back camera (environment facing) by default
+        await html5Qrcode.start(
+          { facingMode: 'environment' },
+          config,
+          (decodedText) => {
+            if (isMounted) onScan(decodedText);
+          },
+          () => {} // silent on frame scan failure
+        );
+      } catch (err) {
+        console.warn("Environment camera failed/unavailable, attempting fallback camera:", err);
+        try {
+          // Fallback to front/default camera
+          await html5Qrcode.start(
+            { facingMode: 'user' },
+            config,
+            (decodedText) => {
+              if (isMounted) onScan(decodedText);
+            },
+            () => {}
+          );
+        } catch (fallbackErr) {
+          console.error("Failed to start camera scanner:", fallbackErr);
+          if (isMounted) {
+            setErrorMessage("Camera access failed. Please ensure camera permissions are granted.");
+          }
         }
-      );
+      }
+    };
 
-      scanner = newScanner;
-      scannerRef.current = newScanner;
-    }, 100);
+    const timer = setTimeout(() => {
+      startScanner();
+    }, 150);
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
-      if (scanner) {
-        scanner.clear().catch(e => console.error("Failed to clear scanner", e));
-        scannerRef.current = null;
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          scannerRef.current
+            .stop()
+            .then(() => {
+              scannerRef.current?.clear();
+            })
+            .catch((e) => console.error("Failed to stop QR scanner", e));
+        } else {
+          try {
+            scannerRef.current.clear();
+          } catch (e) {
+            // silent cleanup
+          }
+        }
       }
     };
   }, [onScan]);
@@ -69,63 +100,19 @@ const QRScanner = ({ onScan, onClose }: QRScannerProps) => {
         </div>
 
         <div className="p-6 bg-slate-950/90">
-          <div id="qr-reader" className="overflow-hidden rounded border border-cyan-500/10 qr-custom-style"></div>
-          
-          <style>{`
-            #qr-reader {
-              border: none !important;
-              background: transparent !important;
-            }
-            #qr-reader__scan_region {
-              background: rgba(15, 23, 42, 0.5) !important;
-              border-radius: 8px !important;
-            }
-            #qr-reader__dashboard {
-              background: transparent !important;
-              padding: 20px 0 0 0 !important;
-              color: #94a3b8 !important;
-              font-family: 'Orbitron', sans-serif !important;
-              text-transform: uppercase !important;
-              letter-spacing: 0.1em !important;
-              font-size: 10px !important;
-            }
-            #qr-reader__dashboard button {
-              background: rgba(6, 182, 212, 0.1) !important;
-              border: 1px solid rgba(6, 182, 212, 0.3) !important;
-              color: #22d3ee !important;
-              padding: 8px 16px !important;
-              border-radius: 0 !important;
-              text-transform: uppercase !important;
-              font-size: 10px !important;
-              font-weight: bold !important;
-              cursor: pointer !important;
-              transition: all 0.2s !important;
-            }
-            #qr-reader__dashboard button:hover {
-              background: rgba(6, 182, 212, 0.2) !important;
-              border-color: #22d3ee !important;
-            }
-            #qr-reader__camera_selection {
-              background: #0f172a !important;
-              border: 1px solid rgba(6, 182, 212, 0.2) !important;
-              color: #94a3b8 !important;
-              padding: 4px !important;
-              margin-bottom: 10px !important;
-              outline: none !important;
-            }
-            #qr-reader img {
-                display: none !important;
-            }
-            #qr-reader__status_span {
-                display: none !important;
-            }
-          `}</style>
+          {errorMessage ? (
+            <div className="p-4 rounded border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs text-center font-orbitron">
+              {errorMessage}
+            </div>
+          ) : (
+            <div id="qr-reader" className="overflow-hidden rounded border border-cyan-500/20 min-h-[250px]" />
+          )}
         </div>
 
         <div className="p-4 border-t border-cyan-500/10 bg-slate-900/50">
           <p className="text-[9px] text-cyan-500/60 font-orbitron text-center tracking-[0.2em] uppercase leading-relaxed">
             Position entity QR within containment field<br/>
-            <span className="text-slate-600 font-mono text-[8px]">Awaiting Signal...</span>
+            <span className="text-slate-600 font-mono text-[8px]">Primary Sensor: Back Camera</span>
           </p>
         </div>
       </div>

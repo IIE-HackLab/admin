@@ -32,6 +32,7 @@ interface Hackathon {
 
 interface RegistrationResponse {
   _id: string
+  userId?: string
   registrationDate: string
   status?: RegistrationStatus
   user?: { name?: string; email?: string; uid?: string }
@@ -39,8 +40,6 @@ interface RegistrationResponse {
   attendance?: boolean
   food?: boolean
 }
-
-
 
 export function RegistrationsPage() {
   const { hackathonId } = useParams({ from: '/h/$hackathonId' })
@@ -65,10 +64,37 @@ export function RegistrationsPage() {
     return () => unsubscribe()
   }, [])
 
+  const extractUidFromScannedText = (rawText: string): string => {
+    const trimmed = rawText.trim()
+    if (!trimmed) return ''
+
+    // Match any URL pattern containing /[UID]/profile (handles localhost, custom domains, trailing slashes, query params)
+    const profileMatch = trimmed.match(/(?:.*\/)?([^\/]+)\/profile(?:\/|\?.*)?$/i)
+    if (profileMatch && profileMatch[1]) {
+      return profileMatch[1]
+    }
+
+    // URL parsing fallback
+    try {
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        const parsedUrl = new URL(trimmed)
+        const segments = parsedUrl.pathname.split('/').filter(Boolean)
+        if (segments.length >= 2 && segments[segments.length - 1].toLowerCase() === 'profile') {
+          return segments[segments.length - 2]
+        }
+        if (segments.length >= 1) {
+          return segments[segments.length - 1]
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+
+    return trimmed
+  }
+
   const handleScan = async (decodedText: string) => {
-    // Expected URL: https://participant-dashboard.vercel.app/[userUID]/profile
-    const match = decodedText.match(/https:\/\/participant-dashboard\.vercel\.app\/([^/]+)\/profile/)
-    const userUID = match ? match[1] : decodedText 
+    const userUID = extractUidFromScannedText(decodedText)
 
     if (userUID) {
       // Prevent duplicate rapid scans (within 3 seconds)
@@ -76,8 +102,14 @@ export function RegistrationsPage() {
         return
       }
 
-      // Validate against Firebase UID
-      const userExists = data.find(reg => reg.firebaseUid === userUID)
+      // Match against firebaseUid, mongoId, or email
+      const userExists = data.find(reg => 
+        (reg.firebaseUid && reg.firebaseUid === userUID) ||
+        (reg.mongoId && reg.mongoId === userUID) ||
+        (reg.email && reg.email.toLowerCase() === userUID.toLowerCase())
+      )
+
+      const targetUid = userExists?.firebaseUid || userUID
       
       if (userExists) {
         // Check if already marked to avoid redundant updates
@@ -91,7 +123,7 @@ export function RegistrationsPage() {
 
         // Update local state
         setData(prev => prev.map(reg => {
-          if (reg.firebaseUid === userUID) {
+          if (reg.firebaseUid === targetUid || reg.mongoId === userExists.mongoId) {
             return { ...reg, [scanMode!]: true }
           }
           return reg
@@ -101,7 +133,7 @@ export function RegistrationsPage() {
 
         // Update backend
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/registrations/${hackathonId}/mark/${userUID}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/registrations/${hackathonId}/mark/${targetUid}`, {
             method: 'PATCH',
             headers: { 
               'Content-Type': 'application/json',
@@ -123,7 +155,7 @@ export function RegistrationsPage() {
           console.error(`Failed to update ${scanMode} on server:`, error)
           // Rollback local state on failure
           setData(prev => prev.map(reg => {
-            if (reg.firebaseUid === userUID) {
+            if (reg.firebaseUid === targetUid || reg.mongoId === userExists.mongoId) {
               return { ...reg, [scanMode!]: false }
             }
             return reg
@@ -136,7 +168,7 @@ export function RegistrationsPage() {
       } else {
         setLastScanned({ id: userUID, time: Date.now() })
         toast.error('User not present', {
-          description: 'UID not found in registry manifest.',
+          description: `UID "${userUID}" not found in registry manifest.`,
           style: { background: '#0f172a', border: '1px solid rgba(244, 63, 94, 0.3)', color: '#fb7185' }
         })
       }
@@ -186,7 +218,7 @@ export function RegistrationsPage() {
             registrationData,
             attendance: reg.attendance || false,
             food: reg.food || false,
-            firebaseUid: reg.user?.uid,
+            firebaseUid: reg.user?.uid || reg.userId || reg._id,
           }
         })
 
